@@ -1,0 +1,9 @@
+{
+  "created": {
+    "time": "2020-04-06 11:03:00.144872",
+    "protocol": "OND",
+    "domain": "image_classification",
+    "detector": "0.1.1",
+    "detection_threshold": 0.1
+  }
+}

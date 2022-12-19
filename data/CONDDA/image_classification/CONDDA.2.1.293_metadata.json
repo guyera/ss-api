@@ -1,0 +1,8 @@
+{
+  "protocol": "OND",
+  "known_classes": 413,
+  "max_novel_classes": 2,
+  "round_size": 128,
+  "threshold": 0.5,
+  "red_light": "known_unknown_classes/images/val/00027/00064.JPEG"
+}

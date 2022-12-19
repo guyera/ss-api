@@ -1,0 +1,15 @@
+{
+  "created": {
+    "time": "2020-04-06 11:03:00.144872",
+    "protocol": "OND",
+    "domain": "activity_recognition",
+    "detector": "0.1.1",
+    "detection_threshold": 0.1,
+    "hints": ["novelty_instance_detection"]
+  },
+  "tests": {
+    "completed_tests": [
+			"OND.1.1.1234"
+		]
+	}
+}

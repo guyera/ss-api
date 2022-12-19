@@ -1,0 +1,2 @@
+[console_scripts]
+sail_on_server = sail_on.api.server:command_line

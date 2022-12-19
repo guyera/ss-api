@@ -1,0 +1,30 @@
+{
+    "session":
+    {
+        "novelty_levels": [false, true, false],
+        "protocol": "OND",
+        "domain": "image_classification",
+        "test_ids_filename": "test_ids.csv",
+        "novelty_detector_class": "OND_5_14_A1",
+        "detector_config":
+        {
+          "efficientnet_params": {
+                    "model_path": "",
+                    "known_classes": 413
+                    },
+          "evm_params": {
+                     "model_path": "",
+                     "tailsize": 33998,
+                     "cover_threshold": 0.7,
+                     "distance_multiplier": 0.55
+                },
+          "dataloader_params": {
+                    "batch_size": 1024,
+                    "num_workers": 8
+                   },
+            "csv_folder": "",
+            "cores": 6
+            "detection_threshold": 0.3
+        }
+    }
+}

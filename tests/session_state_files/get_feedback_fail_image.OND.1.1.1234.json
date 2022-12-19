@@ -1,0 +1,57 @@
+{
+  "data_request": {
+    "time": [
+			"2020-12-22 17:05:51.766643"
+		],
+		"rounds": {
+			"0": {
+				"time": [
+					"2020-12-22 17:05:51.766643"
+				]
+			},
+			"1": {
+				"time": [
+					"2020-12-22 17:05:55.836594"
+				]
+			}
+		},
+		"last round": "1"
+  },
+  "post_results": {
+    "time": [
+      "2020-10-20 11:37:24.499321"
+    ],
+    "detection file path": "tests/server_results_unit_tests/OND/image_classification/get_feedback_fail_image.OND.1.1.1234_detection.csv",
+    "classification file path": "tests/server_results_unit_tests/OND/image_classification/get_feedback_fail_image.OND.1.1.1234_classification.csv",
+    "last round": "1",
+    "rounds": {
+      "0": {
+        "time": [
+          "2020-09-25 11:05:23.986603"
+        ]
+      },
+      "1": {
+        "time": [
+          "2020-10-20 11:37:24.499321"
+        ]
+      }
+    }
+  },
+  "get_feedback": {
+    "time": [
+      "2020-10-14 16:40:11.457958"
+    ],
+    "rounds": {
+      "1": {
+        "time": [
+          "2020-10-14 16:40:11.457958",
+          "2020-10-14 16:40:11.478922"
+        ],
+        "classification": 1,
+        "characterization": 0,
+        "transcription": 0
+      }
+    },
+    "last round": "1"
+  }
+}

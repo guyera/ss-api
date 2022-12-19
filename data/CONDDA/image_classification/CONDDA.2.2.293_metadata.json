@@ -1,0 +1,7 @@
+{
+  "protocol": "CONDDA",
+  "known_classes": 413,
+  "round_size": 128,
+  "threshold": 0.5,
+  "red_light": "known_unknown_classes/images/val/00039/00042.JPEG"
+}
