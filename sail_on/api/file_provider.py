@@ -20,6 +20,7 @@ from sklearn.metrics.cluster import normalized_mutual_info_score
 from dateutil import parser
 import zipfile
 import re
+import ast
 
 from typing import List, Optional, Dict, Any
 from csv import reader
@@ -455,7 +456,7 @@ def get_hint_typeB(
 
     df = df[round_pos:round_pos + int(metadata["round_size"])]
     
-    return {k:v for k,v in zip(df["new_image_path"].tolist(), df["novel"].tolist())}
+    return {k:v for k,v in zip(df["image_path"].tolist(), df["novel"].tolist())}
 
 
 class FileProvider(Provider):
@@ -1250,11 +1251,19 @@ class FileProvider(Provider):
         latest["finished_tests"] = structure["tests"]["completed_tests"]
         return latest
 
-class FileProviderSVO(FileProvider):
-    def __init__(self, folder: str, results_folder: str):
+class FileProviderSS(FileProvider):
+    def __init__(self, folder: str, bboxes_json_file:str, results_folder: str):
         super().__init__(folder, results_folder)
-    
-    feedback_request_mapping = { "svo_classification" : 
+
+        try:
+            assert bboxes_json_file.lower().endswith('.json')
+            assert os.path.exists(bboxes_json_file)
+            f = open(bboxes_json_file)
+            self.bboxes = json.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'Bounding boxes json file "{self.bboxes}" could not be loaded. Ensure file exists!')
+        
+    feedback_request_mapping = { "image_classification" : 
                                     {
                                         ProtocolConstants.CLASSIFICATION:  {
                                             "function": get_classification_feedback_topk,
@@ -1275,7 +1284,7 @@ class FileProviderSVO(FileProvider):
                                     }
                                 }
 
-    hint_request_mapping = { "svo_classification" : 
+    hint_request_mapping = { "image_classification" : 
                                 {
                                     ProtocolConstants.TYPE_A:  {
                                         "function": get_hint_typeA,
@@ -1326,8 +1335,10 @@ class FileProviderSVO(FileProvider):
 
             temp_file_path = BytesIO()
             lines = read_gt_csv_file(file_location)
+            # print('\n\n\n************** lines:', lines, '\n\n\n')
             # HARDCODED 
-            lines = [[x[0],x[-9:-1]] for x in lines if x[0].strip("\n\t\"',.") != ""]
+            # lines = [[x[0],x[-9:-1]] for x in lines if x[0].strip("\n\t\"',.") != ""]
+            lines = [x[0] for x in lines if x[0].strip("\n\t\"',.") != ""]
             try:
                     round_pos = int(round_id) * int(metadata["round_size"])
             except KeyError:
@@ -1346,6 +1357,14 @@ class FileProviderSVO(FileProvider):
         else:
             temp_file_path = open(file_location, 'rb')
 
+        bboxes = {}
+        # print('\n\ntemp_file_path:', temp_file_path.getvalue(), '\n\n')
+        list_image_paths = ast.literal_eval(temp_file_path.getvalue().decode("utf-8"))
+        for f_path in list_image_paths:
+            fname = f_path.split('/')[-1]
+            if f_path != "" and fname in self.bboxes.keys():
+                bboxes[fname] = self.bboxes[fname]
+
         log_session(
             self.results_folder,
             session_id,
@@ -1354,7 +1373,19 @@ class FileProviderSVO(FileProvider):
             activity="data_request",
         )
 
-        return temp_file_path
+        # Format for output return
+        output = {
+            'images': list_image_paths,
+            'bboxes': bboxes
+        }
+        temp_file = BytesIO()
+        temp_file.write(
+            str(json.dumps(output)).encode('utf-8')
+        )
+        temp_file.seek(0)
+
+        # return temp_file_path
+        return temp_file
 
     def get_feedback(
         self,
@@ -1368,6 +1399,7 @@ class FileProviderSVO(FileProvider):
         metadata = self.get_test_metadata(session_id, test_id, False)
         structure = get_session_info(self.results_folder, session_id)
         test_structure = get_session_test_info(self.results_folder, session_id, test_id)
+        print('\n\nThis is test_structure:\n', test_structure, '\n\n')
         domain = structure["created"]["domain"]
         if domain not in self.feedback_request_mapping:
             raise ProtocolError(
@@ -1401,6 +1433,8 @@ class FileProviderSVO(FileProvider):
         if not budgeted_feedback:
             feedback_ids = []
 
+        # import ipdb; ipdb.set_trace()
+
         # Gets the amount of ids already requested for this type of feedback this round and
         # determines whether the limit has already been reached
         feedback_round_id = str(max([int(r) for r in test_structure["post_results"]["rounds"].keys()]))
@@ -1415,7 +1449,6 @@ class FileProviderSVO(FileProvider):
         except KeyError:
             feedback_count = 0
             # print(f"FC : {feedback_count}, FCAT : {feedback_category}, FR : {feedback_round_id}")
-
 
         ground_truth_file = os.path.join(self.folder, metadata["protocol"], domain, f"{test_id}_single_df.csv")
 

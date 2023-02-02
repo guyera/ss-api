@@ -41,7 +41,8 @@ def init(hostname: str, port: int) -> None:
     # Note: Initializing the api will block the thread from continuing until it
     # is disabled. This should be the last call in the thread.
     if get_provider() is not None:
-        app.run(host=hostname, port=port, threaded=True)
+        # app.run(host=hostname, port=port, threaded=True)
+        app.run(host=hostname, port=port, threaded=True, debug=True)
         logging.info(f"Api Server successfully started at {hostname}:{port}")
     else:
         raise ServerError(
@@ -814,6 +815,7 @@ def main(args: argparse.Namespace) -> None:
     set_provider(
         FileProvider(
             os.path.abspath(args.data_directory),
+            os.path.abspath(args.bboxes_json_file),
             os.path.abspath(args.results_directory),
         )
     )
@@ -844,6 +846,12 @@ def command_line() -> None:
         help="test file structure",
         default=".",
         dest="data_directory",
+    )
+    parser.add_argument(
+        "--bboxes-json-file",
+        help="json containing bounding boxes of all test images",
+        default=".",
+        dest="bboxes_json_file",
     )
     parser.add_argument(
         "--results-directory",
