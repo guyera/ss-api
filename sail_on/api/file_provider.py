@@ -159,7 +159,8 @@ def read_feedback_file(
             "round_size not defined in metadata.",
             traceback.format_stack(),
         )
-
+    
+    
     if feedback_ids is not None and len(feedback_ids) != 0:
         return {
             x[0]: [n for n in x[1:]]
@@ -172,6 +173,31 @@ def read_feedback_file(
             for x in
             [[n.strip(" \"'") for n in y] for y in lines][start:end]
         }
+        
+    '''
+    if return_header:
+        if feedback_ids is not None and len(feedback_ids) != 0:
+            output = [
+                x for x in [[n.strip(" \"'") for n in y] for y in lines][start:end] if x[0] in feedback_ids
+            ]
+        else:
+            output = [
+                x for x in [[n.strip(" \"'") for n in y] for y in lines][start:end]
+            ]
+        
+        if lines[0] not in output:
+            return lines[0] + output
+        return output
+    else:
+        if feedback_ids is not None and len(feedback_ids) != 0:
+            return [
+                x for x in [[n.strip(" \"'") for n in y] for y in lines][start:end] if x[0] in feedback_ids
+            ]
+        else:
+            return [
+                x for x in [[n.strip(" \"'") for n in y] for y in lines][start:end]
+            ]
+    '''
 
 def get_classification_feedback(
         gt_file: str,
@@ -188,44 +214,18 @@ def get_classification_feedback(
             feedback_max_ids = min(metadata.get('feedback_max_ids',len(results)),len(results))
             feedback_ids = list(results.keys())[:int(feedback_max_ids)]
 
-    ground_truth = read_feedback_file(read_gt_csv_file(gt_file), feedback_ids, metadata,
-                                      check_constrained= feedback_ids is None or len(feedback_ids) == 0)
+    ground_truth = read_feedback_file(
+        read_gt_csv_file(gt_file), 
+        feedback_ids, metadata,
+        check_constrained= feedback_ids is None or len(feedback_ids) == 0
+    )
+    header = read_gt_csv_file(gt_file, with_header=True)[0]
 
-    return {
-        x: min(int(ground_truth[x][metadata["columns"][0]]), metadata["known_classes"]) 
-        for x in ground_truth.keys()
-    }
-
-def get_classification_feedback_topk(
-        gt_file: str,
-        topk_file: str,
-        result_files: List[str],
-        feedback_ids: List[str],
-        metadata: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Calculates and returns the proper feedback for classification type feedback"""
-    if (feedback_ids is None or len(feedback_ids) == 0):
-        # if feedback ids not provided, limit to those in the last round
-        with open(result_files[0], "r") as rf:
-            result_reader = csv.reader(rf, delimiter=",")
-            results = read_feedback_file(result_reader, None, metadata, check_constrained=True)
-            feedback_max_ids = min(metadata.get('feedback_max_ids',len(results)),len(results))
-            feedback_ids = list(results.keys())[:int(feedback_max_ids)]
-
-    ground_truth = read_feedback_file(read_gt_csv_file(gt_file), feedback_ids, metadata,
-                                      check_constrained= feedback_ids is None or len(feedback_ids) == 0)
-    
-    topk = read_feedback_file(read_gt_csv_file(topk_file, with_header=True), None, metadata,
-                                      check_constrained= feedback_ids is None or len(feedback_ids) == 0)   
-    
-    '''
-    
-    '''
-    data = {
-        x: topk[str(int(float(ground_truth[x][metadata["columns"][0] - 1])))] 
-        for x in ground_truth.keys()
-    }
-    return data
+    # return {
+    #     x: min(int(ground_truth[x][metadata["columns"][0]]), metadata["known_classes"]) 
+    #     for x in ground_truth.keys()
+    # }
+    return [header] + [[x] + ground_truth[x] for x in ground_truth.keys()]
 
 
 def get_classification_var_feedback(
@@ -264,8 +264,11 @@ def get_detection_feedback(
                 # No budget for given detection
                 feedback_ids = list(results.keys())
 
-    ground_truth = read_feedback_file(read_gt_csv_file(gt_file), feedback_ids, metadata,
-                                      check_constrained= feedback_ids is None or len(feedback_ids) == 0)
+    ground_truth = read_feedback_file(
+        read_gt_csv_file(gt_file), 
+        feedback_ids, metadata,
+        check_constrained= feedback_ids is None or len(feedback_ids) == 0
+    )
 
     return {
         x: ground_truth[x][metadata["columns"][0]] for x in ground_truth.keys()
@@ -391,7 +394,7 @@ def get_cluster_feedback(
     
     return return_dict
 
-def psuedo_label_feedback(
+def pseudo_label_feedback(
         gt_file: str,
         feedback_ids: List[str],
         feedback_type: str,
@@ -399,19 +402,19 @@ def psuedo_label_feedback(
         folder: str,
         session_id: str
 ) -> Dict[str, Any]:
-    "Grabs psuedo label feedback for requested ids"
+    "Grabs pseudo label feedback for requested ids"
     ground_truth = read_feedback_file(read_gt_csv_file(gt_file), feedback_ids, metadata)
 
     structure = get_session_info(folder, session_id)
 
-    if "psuedo_labels" in structure:
-        if feedback_type in structure["psuedo_labels"]:
-            labels = structure["psuedo_labels"][feedback_type]
+    if "pseudo_labels" in structure:
+        if feedback_type in structure["pseudo_labels"]:
+            labels = structure["pseudo_labels"][feedback_type]
         else:
-            structure["psuedo_labels"][feedback_type] = []
+            structure["pseudo_labels"][feedback_type] = []
             labels = []
     else:
-        structure["psuedo_labels"] = {feedback_type: []}
+        structure["pseudo_labels"] = {feedback_type: []}
         labels = []
 
     return_dict = {}
@@ -421,7 +424,7 @@ def psuedo_label_feedback(
             labels.append(col)
         return_dict[x] = labels.index(col)
 
-    structure["psuedo_labels"][feedback_type] = labels
+    structure["pseudo_labels"][feedback_type] = labels
     write_session_log_file(structure, os.path.join(folder, f"{str(session_id)}.json"))
 
     return return_dict
@@ -740,14 +743,14 @@ class FileProvider(Provider):
         # and if so, grab the proper files
 
         try:
-                feedback_definition = self.feedback_request_mapping[domain][feedback_type]
-                file_types = feedback_definition["files"]
+            feedback_definition = self.feedback_request_mapping[domain][feedback_type]
+            file_types = feedback_definition["files"]
         except:
-                raise ProtocolError(
-                    "InvalidFeedbackType",
-                    f"Invalid feedback type requested for the test id {test_id} with domain {domain}",
-                    traceback.format_stack(),
-                )
+            raise ProtocolError(
+                "InvalidFeedbackType",
+                f"Invalid feedback type requested for the test id {test_id} with domain {domain}",
+                traceback.format_stack(),
+            )
         is_given_detection_mode = 'red_light' in structure["created"].get('hints', [])
         budgeted_feedback = feedback_definition['budgeted_feedback'] and not \
         (feedback_type ==  ProtocolConstants.DETECTION and is_given_detection_mode)
@@ -775,21 +778,21 @@ class FileProvider(Provider):
 
         if not os.path.exists(ground_truth_file):
             raise ServerError(
-                    "test_id_invalid",
-                    f"Could not find ground truth file for test Id {test_id}",
-                    traceback.format_stack(),
-                )
+                "test_id_invalid",
+                f"Could not find ground truth file for test Id {test_id}",
+                traceback.format_stack(),
+            )
 
         results_files = []
         for t in file_types:
-                results_files.append(os.path.join(self.results_folder,metadata["protocol"], domain,f"{str(session_id)}.{str(test_id)}_{t}.csv"))
+            results_files.append(os.path.join(self.results_folder,metadata["protocol"], domain,f"{str(session_id)}.{str(test_id)}_{t}.csv"))
 
         if len(results_files) < len(file_types):
-                raise ServerError(
-                    "test_id_invalid",
-                    f"Could not find posted result file(s) for test Id {test_id} with feedback type {feedback_type}",
-                    traceback.format_stack(),
-                )
+            raise ServerError(
+                "test_id_invalid",
+                f"Could not find posted result file(s) for test Id {test_id} with feedback type {feedback_type}",
+                traceback.format_stack(),
+            )
 
         # Ensure any required hint(s) are present in the session info structure
         req_hints = feedback_definition.get("required_hints", [])
@@ -844,8 +847,8 @@ class FileProvider(Provider):
 
         # Get feedback from specified test
         try:
-            if "psuedo" in feedback_type:
-                feedback = psuedo_label_feedback(
+            if "pseudo" in feedback_type:
+                feedback = pseudo_label_feedback(
                     ground_truth_file,
                     feedback_ids,
                     feedback_definition["files"][0],
@@ -1262,42 +1265,65 @@ class FileProviderSS(FileProvider):
             self.bboxes = json.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(f'Bounding boxes json file "{self.bboxes}" could not be loaded. Ensure file exists!')
-        
-    feedback_request_mapping = { "image_classification" : 
-                                    {
-                                        ProtocolConstants.CLASSIFICATION:  {
-                                            "function": get_classification_feedback_topk,
-                                            "files": [ProtocolConstants.CLASSIFICATION ],
-                                            "columns": {"subject" : [3], "verb" : [9], "object" : [6]}, # HARDCODE: Index of S,V,O in ground truth
-                                            "detection_req": ProtocolConstants.NOTIFY_AND_CONTINUE,
-                                            "budgeted_feedback": True
-                                        },
-                                        ProtocolConstants.DETECTION: {
-                                            "function": get_detection_feedback,
-                                            "files": [ProtocolConstants.DETECTION],
-                                            "columns": [-1], # HARDCODE
-                                            "detection_req": ProtocolConstants.SKIP,
-                                            "budgeted_feedback": True,
-                                            "required_hints": [],
-                                            "alternate_budget": "max_detection_feedback_ids"
-                                        }
-                                    }
-                                }
+    
+    '''
+    feedback_request_mapping = { 
+        "image_classification" : {
+            ProtocolConstants.CLASSIFICATION:  {
+                "function": get_classification_feedback_topk,
+                "files": [ProtocolConstants.CLASSIFICATION ],
+                "columns": {"subject" : [3], "verb" : [9], "object" : [6]}, # HARDCODE: Index of S,V,O in ground truth
+                "detection_req": ProtocolConstants.NOTIFY_AND_CONTINUE,
+                "budgeted_feedback": True
+            },
+            ProtocolConstants.DETECTION: {
+                "function": get_detection_feedback,
+                "files": [ProtocolConstants.DETECTION],
+                "columns": [-1], # HARDCODE
+                "detection_req": ProtocolConstants.SKIP,
+                "budgeted_feedback": True,
+                "required_hints": [],
+                "alternate_budget": "max_detection_feedback_ids"
+            }
+        }
+    }
+    '''
 
-    hint_request_mapping = { "image_classification" : 
-                                {
-                                    ProtocolConstants.TYPE_A:  {
-                                        "function": get_hint_typeA,
-                                        "files": [ProtocolConstants.TYPE_A],
-                                        "columns": [1] # HARDCODE
-                                    },
-                                    ProtocolConstants.TYPE_B: {
-                                        "function": get_hint_typeB,
-                                        "files": [ProtocolConstants.TYPE_A],
-                                        "columns": [-1], # HARDCODE
-                                    }
-                                }
-                            }
+    feedback_request_mapping = { 
+        "image_classification" : {
+            ProtocolConstants.CLASSIFICATION:  {
+                "function": get_classification_feedback,
+                "files": [ProtocolConstants.CLASSIFICATION ],
+                "columns": [1],
+                "detection_req": ProtocolConstants.NOTIFY_AND_CONTINUE,
+                "budgeted_feedback": True
+            },
+            ProtocolConstants.DETECTION: {
+                "function": get_detection_feedback,
+                "files": [ProtocolConstants.DETECTION],
+                "columns": [-1], # HARDCODE
+                "detection_req": ProtocolConstants.SKIP,
+                "budgeted_feedback": True,
+                "required_hints": [],
+                "alternate_budget": "max_detection_feedback_ids"
+            }
+        }
+    }
+
+    hint_request_mapping = {
+        "image_classification" : {
+            ProtocolConstants.TYPE_A:  {
+                "function": get_hint_typeA,
+                "files": [ProtocolConstants.TYPE_A],
+                "columns": [1] # HARDCODE
+            },
+            ProtocolConstants.TYPE_B: {
+                "function": get_hint_typeB,
+                "files": [ProtocolConstants.TYPE_A],
+                "columns": [-1], # HARDCODE
+            }
+        }
+    }
 
     def dataset_request(self, session_id: str, test_id: str, round_id: int) -> FileResult:
         """Request a dataset."""
@@ -1340,13 +1366,13 @@ class FileProviderSS(FileProvider):
             # lines = [[x[0],x[-9:-1]] for x in lines if x[0].strip("\n\t\"',.") != ""]
             lines = [x[0] for x in lines if x[0].strip("\n\t\"',.") != ""]
             try:
-                    round_pos = int(round_id) * int(metadata["round_size"])
+                round_pos = int(round_id) * int(metadata["round_size"])
             except KeyError:
-                    raise RoundError(
-                        "no_defined_rounds",
-                        f"round_size not defined in metadata for test id {test_id}",
-                        traceback.format_stack(),
-                    )
+                raise RoundError(
+                    "no_defined_rounds",
+                    f"round_size not defined in metadata for test id {test_id}",
+                    traceback.format_stack(),
+                )
             if round_pos >= len(lines):
                 return None
 
@@ -1399,7 +1425,6 @@ class FileProviderSS(FileProvider):
         metadata = self.get_test_metadata(session_id, test_id, False)
         structure = get_session_info(self.results_folder, session_id)
         test_structure = get_session_test_info(self.results_folder, session_id, test_id)
-        print('\n\nThis is test_structure:\n', test_structure, '\n\n')
         domain = structure["created"]["domain"]
         if domain not in self.feedback_request_mapping:
             raise ProtocolError(
@@ -1413,14 +1438,14 @@ class FileProviderSS(FileProvider):
         # and if so, grab the proper files
 
         try:
-                feedback_definition = self.feedback_request_mapping[domain][feedback_type]
-                file_types = feedback_definition["files"]
+            feedback_definition = self.feedback_request_mapping[domain][feedback_type]
+            file_types = feedback_definition["files"]
         except:
-                raise ProtocolError(
-                    "InvalidFeedbackType",
-                    f"Invalid feedback type requested for the test id {test_id} with domain {domain}",
-                    traceback.format_stack(),
-                )
+            raise ProtocolError(
+                "InvalidFeedbackType",
+                f"Invalid feedback type requested for the test id {test_id} with domain {domain}",
+                traceback.format_stack(),
+            )
         is_given_detection_mode = 'red_light' in structure["created"].get('hints', [])
         budgeted_feedback = feedback_definition['budgeted_feedback'] and not \
         (feedback_type ==  ProtocolConstants.DETECTION and is_given_detection_mode)
@@ -1430,6 +1455,7 @@ class FileProviderSS(FileProvider):
         else:
             feedback_budget = int(metadata.get("feedback_max_ids",0))
 
+        # budgeted_feedback = True  # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< DELETE THIS <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         if not budgeted_feedback:
             feedback_ids = []
 
@@ -1461,14 +1487,14 @@ class FileProviderSS(FileProvider):
 
         results_files = []
         for t in file_types:
-                results_files.append(os.path.join(self.results_folder,metadata["protocol"], domain,f"{str(session_id)}.{str(test_id)}_{t}.csv"))
+            results_files.append(os.path.join(self.results_folder,metadata["protocol"], domain,f"{str(session_id)}.{str(test_id)}_{t}.csv"))
 
         if len(results_files) < len(file_types):
-                raise ServerError(
-                    "test_id_invalid",
-                    f"Could not find posted result file(s) for test Id {test_id} with feedback type {feedback_type}",
-                    traceback.format_stack(),
-                )
+            raise ServerError(
+                "test_id_invalid",
+                f"Could not find posted result file(s) for test Id {test_id} with feedback type {feedback_type}",
+                traceback.format_stack(),
+            )
 
         # Ensure any required hint(s) are present in the session info structure
         req_hints = feedback_definition.get("required_hints", [])
@@ -1507,8 +1533,8 @@ class FileProviderSS(FileProvider):
                             return BytesIO()
                         else:
                             raise ProtocolError(
-                             "NoveltyDetectionRequired",
-                             f"In order to request {feedback_type} for domain {domain}, novelty must be declared for the test"
+                                "NoveltyDetectionRequired",
+                                f"In order to request {feedback_type} for domain {domain}, novelty must be declared for the test"
                             )
                 except ProtocolError as e:
                     raise e
@@ -1522,19 +1548,10 @@ class FileProviderSS(FileProvider):
         # Add columns to metadata for use in feedback
         metadata["columns"] = feedback_definition.get("columns", [])
 
-        topk_file = os.path.join(self.folder, metadata["protocol"], domain, f"{feedback_category}_topk.csv")
-
-        if not os.path.isfile(topk_file) and feedback_type == "classification":
-            raise ServerError(
-                    "topk file invalid",
-                    f"Could not find ground truth file for Category {feedback_category}",
-                    traceback.format_stack(),
-                )
-
         # Get feedback from specified test
         try:
-            if "psuedo" in feedback_type:
-                feedback = psuedo_label_feedback(
+            if "pseudo" in feedback_type:
+                feedback = pseudo_label_feedback(
                     ground_truth_file,
                     feedback_ids,
                     feedback_definition["files"][0],
@@ -1543,10 +1560,9 @@ class FileProviderSS(FileProvider):
                     session_id
                 )
             elif "classification" in feedback_type:
-                metadata["columns"] = metadata["columns"][feedback_category]
+                # metadata["columns"] = metadata["columns"][feedback_category]
                 feedback = feedback_definition["function"](
                     ground_truth_file,
-                    topk_file,
                     results_files,
                     feedback_ids,
                     metadata
@@ -1574,7 +1590,6 @@ class FileProviderSS(FileProvider):
             number_of_ids_to_return = min(number_of_ids_to_return, left_over_ids)
         feedback_count+=number_of_ids_to_return
 
-
         log_session(
             self.results_folder,
             session_id=session_id,
@@ -1585,15 +1600,24 @@ class FileProviderSS(FileProvider):
         )
 
         feedback_csv = BytesIO()
-        for key in feedback.keys():
-            if type(feedback[key]) is not list:
-                feedback_csv.write(f"{key},{feedback[key]}\n".encode('utf-8'))
-            else:
-                feedback_csv.write(f"{key},{','.join(str(x) for x in feedback[key])}\n".encode('utf-8'))
-            number_of_ids_to_return-=1
-            # once maximium requested number is hit, quit
-            if number_of_ids_to_return == 0:
-                break
+        if "classification" in feedback_type:
+            for row in feedback:
+                # assert isinstance(row, list)
+                feedback_csv.write(f"{','.join(row)}\n".encode('utf-8'))
+                number_of_ids_to_return-=1
+                # once maximium requested number is hit, quit
+                if number_of_ids_to_return == 0:
+                    break
+        else:
+            for key in feedback.keys():
+                if type(feedback[key]) is not list:
+                    feedback_csv.write(f"{key},{feedback[key]}\n".encode('utf-8'))
+                else:
+                    feedback_csv.write(f"{key},{','.join(str(x) for x in feedback[key])}\n".encode('utf-8'))
+                number_of_ids_to_return-=1
+                # once maximium requested number is hit, quit
+                if number_of_ids_to_return == 0:
+                    break
 
         feedback_csv.seek(0)
 
