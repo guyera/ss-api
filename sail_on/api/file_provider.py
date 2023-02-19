@@ -31,7 +31,8 @@ from cachetools import LRUCache, cached
 def read_gt_csv_file(file_location, with_header=False):
     idx = 0 if with_header else 1
     with open(file_location, "r") as f:
-        csv_reader = csv.reader(f, delimiter=",", quotechar='|')
+        # csv_reader = csv.reader(f, delimiter=",", quotechar='|')
+        csv_reader = csv.reader(f, delimiter=",", quotechar='"', skipinitialspace=True)
         return [x for x in csv_reader][idx:]
 
 @cached(cache=LRUCache(maxsize=128))
@@ -144,6 +145,8 @@ def read_feedback_file(
     feedback_constrained = metadata.get('feedback_constrained', True)
 
     lines = [x for x in csv_reader]
+
+    # print('\n\n lines', lines, '\n\n')
 
     try:
         if (not check_constrained or not feedback_constrained) :
@@ -1603,6 +1606,17 @@ class FileProviderSS(FileProvider):
         if "classification" in feedback_type:
             for row in feedback:
                 # assert isinstance(row, list)
+                
+                try:
+                    # double quote both activities and activities_id that are list 
+                    # (needed for csv reader to not treat the commas in the activities list as new column)
+                    check_if_str_is_repr_of_list = ast.literal_eval(row[13])
+                    row[13] = json.dumps(row[13])
+                    row[14] = json.dumps(row[14])
+                except:
+                    # this is the header not need to quote it
+                    pass
+
                 feedback_csv.write(f"{','.join(row)}\n".encode('utf-8'))
                 number_of_ids_to_return-=1
                 # once maximium requested number is hit, quit
