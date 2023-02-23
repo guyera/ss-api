@@ -2,7 +2,7 @@
 from .provider import Provider
 from .server import set_provider, init
 from .errors import ServerError, ProtocolError, ApiError, RoundError
-from .file_provider import FileProviderSVO as FileProvider
+from .file_provider import FileProviderSS as FileProvider
 from .constants import ProtocolConstants
 
 __all__ = [
