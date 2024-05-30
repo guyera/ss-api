@@ -1,4 +1,4 @@
-This repo was originally cloned and modified from https://github.com/darpa-sail-on/Sail-On-API
+This repo was originally cloned and modified from an old snapshot of https://github.com/darpa-sail-on/Sail-On-API
 
 # Sail On API
 PAR's TA1 API
