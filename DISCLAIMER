@@ -1,0 +1,14 @@
+Much of the code in this repo has been built upon the original Sail-On-API repo
+(https://github.com/darpa-sail-on/Sail-On-API). The authors
+do not claim ownership/authorship of any such code in this repo and the
+original license conditions of the aforementioned will take precedence over
+the LICENSE of this repo.
+
+Moreover, much of the code in this repo is the product of collaboration between
+multiple entities. The LICENSE at the top level of this repo only applies to
+source code files that were written by OSU affiliates and not included in
+the original Sail-On-API repo. Some individual source code files
+in this repo not written by OSU affiliates nor derived from the the original
+Sail-On-API repo contain source code comments outlining copyright ownership and rights
+reserved. Those source code comments also take precedence over the LICENSE of
+this repo for those particular files.
