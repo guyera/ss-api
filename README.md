@@ -1,4 +1,4 @@
-This repo was originally cloned and modified from an old snapshot of https://github.com/darpa-sail-on/Sail-On-API/tree/umd_svo
+This repo was originally cloned and modified from a snapshot of the official Sail-On-API reposotory similar to https://github.com/darpa-sail-on/Sail-On-API/tree/umd_svo
 
 # Sail On API
 PAR's TA1 API
