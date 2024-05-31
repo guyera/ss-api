@@ -99,3 +99,6 @@ Run wsgi in the PIPENV environment providing the config file for WSGI and the lo
 LOG_NAME=`date +"%m-%d-%Y.%H.%M"`
 pipenv run gunicorn -c gunicorn.config.py 'sail_on.wsgi:create_app(data_directory="/home/robertsone/TESTS", results_directory="/home/robertsone/RESULTS")' >> "${LOG_NAME}_unicorn_0.txt" 2>&1
 ```
+
+## License
+This repo is a product of collaboration between multiple entities, and different portions of the source code are licensed under different terms. Please familiarize yourself with `DISCLAIMER`, `LICENSE`, and any copyright notices documented in the source code.
