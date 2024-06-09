@@ -1,34 +1,60 @@
 This repo was originally cloned and modified from a snapshot of the official Sail-On-API reposotory similar to https://github.com/darpa-sail-on/Sail-On-API/tree/umd_svo
 
-# Sail On API
-PAR's TA1 API
+# Novel-Snapshot Serengeti Server API
 
 ## Setup
 
 Insure python3 is accessible and pipenv is ibtalled.
 
-1. From the sail-on-api' directory, run 'pipenv --python 3.8'
+1. From the ss-api' directory, run 'pipenv --python 3.8'
 2. Run 'pipenv install'
 2. Run 'pipenv shell'
 3. Run 'python setup.py install'
 
 All other commands should be run within the pipenv shell or pipenv envronment.
 
-### Running the sail-on api
+### Running the  ss-api
 
 To run the API locally, use the following command:
-   `sail_on_server --url 192.168.34.9:8102 --data-directory <path-to-your-test-data> --results-directory ./test/results/dryrun/tmptmp/`
+```bash
+cd ~/ss-api/
+sail_on_server_ss --url 127.0.0.1:8005 \
+--data-directory '/test_trials/api_tests/' \
+--bboxes-json-file 'test.json' \
+--results-directory 'Experiments/Exp_1_EWC'
+```
 
-To use a different port you can add the following optional paramater:
-   `--url localhost:12345`
+### Running the [DCA system](https://github.com/guyera/ss-osu-system/) client
 
-### Running the sail-on client
-
-`git clone https://github.com/pi-umd/sailon-svo/tree/sonaal`
-`cd sailon-svo`
-
-To run the client, use the following command:
-   `python main.py --url http://192.168.34.9:8102 --protocol SVO --batch_size 4 --image_directory /fs/vulcan-projects/sailon_root/sailon_data --results_directory . --config svg.yaml --feedback`
+`git clone https://github.com/guyera/ss-osu-system/`
+```bash
+cd ~/ss-osu-system
+torchrun \
+   --nnodes=1 \
+   --nproc_per_node=4 \
+   --rdzv_id=103 \
+   --rdzv_endpoint=localhost:28319 \
+   main.py \
+   --detection-feedback \
+   --url 'http://127.0.0.1:8005' \
+   --trial-size 3000 \
+   --trial-batch-size 10 \
+   --test_ids OND.102.000 OND.103.000 OND.104.000 OND.105.000 OND.1061.000 OND.1062.000 OND.1063.000 OND.1064.000 \
+   --root-cache-dir .data-cache \
+   --train-csv-path /nfs/hpc/share/sail_on3/final/osu_train_cal_val/train.csv \
+   --pretrained-models-dir 'pretrained-models-balanced-normalization-corrected/train-heads/hack' \
+   --precomputed-feature-dir '.features/hack/resizedpad=224/none/normalized' \
+   --classifier-trainer ewc-train \
+   --retraining-lr 1e-5 \
+   --retraining-batch-size 64 \
+   --retraining-max-epochs 50 \
+   --gan_augment False \
+   --distributed \
+   --feedback-sampling-configuration combined \
+   --feedback-loss-weight 0.5 \
+   --should-log \
+   --log-dir 'Experiments/Exp_1_EWC/logs'
+```
 
 
 ## Data Generation/Evalutation Service
